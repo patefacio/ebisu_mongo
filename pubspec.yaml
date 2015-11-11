@@ -1,0 +1,30 @@
+name: ebisu_mongo
+version: 0.0.1
+author: Daniel Davidson <dbdavidson@yahoo.com>
+homepage: https://github.com/patefacio/ebisu_mongo
+description: >
+  A library that supports code generation of Angular2 code
+
+dependencies:
+
+# custom <ebisu_mongo dependencies>
+# end <ebisu_mongo dependencies>
+
+dev_dependencies:
+  yaml: "any"
+  browser: "any"
+  hop: "any"
+  hop_docgen: "any"
+
+# custom <ebisu_mongo dev dependencies>
+# end <ebisu_mongo dev dependencies>
+
+dependency_overrides:
+# custom <ebisu_mongo dependency overrides>
+# end <ebisu_mongo dependency overrides>
+
+transformers:
+
+# custom <ebisu_mongo transformers>
+# end <ebisu_mongo transformers>
+
