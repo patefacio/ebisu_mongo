@@ -104,6 +104,14 @@ A library that supports code generation of Angular2 code
         'package:ebisu_cpp/ebisu_cpp.dart',
       ]
       ..classes = [
+
+        class_('pod_class')
+        ..doc = 'Support for generating the c++ class for a Pod'
+        ..members = [
+          member('pod_object')..type = 'PodObject',
+          member('class')..type = 'Class'..access = IA
+        ],
+
         class_('pod_header')
         ..members = [
           member('id')..type = 'Id'..access = RO,

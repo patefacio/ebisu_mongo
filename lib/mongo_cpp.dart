@@ -8,6 +8,33 @@ import 'pod.dart';
 // custom <additional imports>
 // end <additional imports>
 
+/// Support for generating the c++ class for a Pod
+class PodClass {
+  PodObject podObject;
+
+  // custom <class PodClass>
+
+  PodClass(this.podObject);
+
+  get podClass => class_(podObject.id)
+    ..isStruct = true
+    ..isStreamable = true
+    ..defaultCtor.usesDefault = true
+    ..assignCopy.usesDefault = true
+    ..usesStreamers = podObject.hasArray
+    ..members = podObject.podFields.map((pf) => _makeMember(pf)).toList()
+    ..addFullMemberCtor();
+
+  Member _makeMember(PodField podField) => member(podField.id)
+    ..type = getCppType(podField.podType)
+    ..init = podField.defaultValue
+    ..cppAccess = public;
+
+  // end <class PodClass>
+
+  Class _class;
+}
+
 class PodHeader {
   Id get id => _id;
   List<Pod> pods = [];
@@ -32,7 +59,7 @@ class PodHeader {
       _header = new Header(id)
         ..namespace = namespace
         ..classes =
-            allPods.toList().reversed.map((p) => _makeClass(p)).toList();
+            allPods.toList().reversed.map((p) => new PodClass(p).podClass).toList();
 
       if (allPods.any((p) => p.hasArray)) {
         _header.includes
@@ -55,20 +82,6 @@ class PodHeader {
       }
     }
   }
-
-  Class _makeClass(PodObject pod) => class_(pod.id)
-    ..isStruct = true
-    ..isStreamable = true
-    ..defaultCtor.usesDefault = true
-    ..assignCopy.usesDefault = true
-    ..usesStreamers = pod.hasArray
-    ..members = pod.podFields.map((pf) => _makeMember(pf)).toList()
-    ..addFullMemberCtor();
-
-  Member _makeMember(PodField podField) => member(podField.id)
-    ..type = getCppType(podField.podType)
-    ..init = podField.defaultValue
-    ..cppAccess = public;
 
   // end <class PodHeader>
 
