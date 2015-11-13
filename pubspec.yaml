@@ -8,6 +8,11 @@ description: >
 dependencies:
 
 # custom <ebisu_mongo dependencies>
+
+  logging: any
+
+  path: any
+  
 # end <ebisu_mongo dependencies>
 
 dev_dependencies:
@@ -17,10 +22,21 @@ dev_dependencies:
   hop_docgen: "any"
 
 # custom <ebisu_mongo dev dependencies>
+
+  test: any
+
 # end <ebisu_mongo dev dependencies>
 
 dependency_overrides:
 # custom <ebisu_mongo dependency overrides>
+
+  ebisu:
+    git: git://github.com/patefacio/ebisu
+
+  ebisu_cpp:
+    git: git://github.com/patefacio/ebisu_cpp
+    
+
 # end <ebisu_mongo dependency overrides>
 
 transformers:

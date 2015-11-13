@@ -31,6 +31,7 @@ A library that supports code generation of Angular2 code
     ..doc = purpose
     ..testLibraries = [
       library('test_pod'),
+      library('test_mongo_cpp'),
     ]
     ..libraries = [
 
@@ -93,8 +94,31 @@ A library that supports code generation of Angular2 code
           member('id')..type = 'Id'..access = RO,
           member('pod_fields')..type = 'List<PodField>'..classInit = [],
         ],
+      ],
 
+      library('mongo_cpp')
+      ..imports = [
+        'pod.dart',
+        'package:id/id.dart',
+        'package:ebisu/ebisu.dart',
+        'package:ebisu_cpp/ebisu_cpp.dart',
       ]
+      ..classes = [
+        class_('pod_header')
+        ..members = [
+          member('id')..type = 'Id'..access = RO,
+          member('pods')..type = 'List<Pod>'..classInit = [],
+          member('namespace')..type = 'Namespace',
+          member('header')..access = IA..type = 'Header',
+        ],
+      ],
+
+      library('mongo_py'),
+
+      library('mongo_dart'),
+
+      library('mongo_capnp'),
+
     ];
 
 

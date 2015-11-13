@@ -165,9 +165,6 @@ PodField podField(id, [podType]) {
 
 PodObject podObject(id, [podFields]) => new PodObject(makeId(id), podFields);
 
-PodHeader podHeader(id, [List<Pod> pods, Namespace namespace]) =>
-    new PodHeader(makeId(id), pods, namespace);
-
 PodArray podArray(PodType referredType) => new PodArray(referredType);
 
 PodField podArrayField(id, PodType referredType) =>

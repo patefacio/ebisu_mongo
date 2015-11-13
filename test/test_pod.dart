@@ -5,9 +5,6 @@ import 'package:test/test.dart';
 
 // custom <additional imports>
 
-import 'package:ebisu/ebisu.dart';
-import 'package:id/id.dart';
-import 'package:ebisu/ebisu.dart';
 import '../lib/pod.dart';
 
 // end <additional imports>
