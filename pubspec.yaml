@@ -12,6 +12,14 @@ dependencies:
   logging: any
 
   path: any
+
+  ebisu:
+    git: git://github.com/patefacio/ebisu
+
+  ebisu_cpp:
+    git: git://github.com/patefacio/ebisu_cpp
+    
+  
   
 # end <ebisu_mongo dependencies>
 
@@ -29,13 +37,6 @@ dev_dependencies:
 
 dependency_overrides:
 # custom <ebisu_mongo dependency overrides>
-
-  ebisu:
-    git: git://github.com/patefacio/ebisu
-
-  ebisu_cpp:
-    git: git://github.com/patefacio/ebisu_cpp
-    
 
 # end <ebisu_mongo dependency overrides>
 

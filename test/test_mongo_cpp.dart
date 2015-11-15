@@ -31,8 +31,6 @@ main([List<String> args]) {
       podField('state', bsonString),
     ];
 
-  print(address);
-
   final person = podObject('person');
 
   person
@@ -44,13 +42,9 @@ main([List<String> args]) {
       podArrayField('children', person)
     ];
 
-  print(person);
-
   final personHeader = podHeader('person')
     ..pods = [person]
     ..namespace = namespace(['config', 'users']);
-
-  print(personHeader);
 
   print(personHeader.header.contents);
 

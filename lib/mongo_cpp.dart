@@ -16,19 +16,70 @@ class PodClass {
 
   PodClass(this.podObject);
 
-  get podClass => class_(podObject.id)
-    ..isStruct = true
-    ..isStreamable = true
-    ..defaultCtor.usesDefault = true
-    ..assignCopy.usesDefault = true
-    ..usesStreamers = podObject.hasArray
-    ..members = podObject.podFields.map((pf) => _makeMember(pf)).toList()
-    ..addFullMemberCtor();
+  get podClass {
+    if(_class == null) {
+      _class = class_(podObject.id)
+        ..isStruct = true
+        ..isStreamable = true
+        ..defaultCtor.usesDefault = true
+        ..assignCopy.usesDefault = true
+        ..usesStreamers = podObject.hasArray
+        ..members = podObject.podFields.map((pf) => _makeMember(pf)).toList()
+        ..addFullMemberCtor();
 
-  Member _makeMember(PodField podField) => member(podField.id)
+      /// add to/from bson
+      _class.withCustomBlock(clsPublic, (CodeBlock cb) {
+        cb.snippets.addAll([ toBson, fromBson ]);
+      });
+    }
+
+    return _class;
+  }
+
+  String get toBson {
+    return brCompact([
+      'bson::bo to_bson(bool exclude_oid = false) {',
+      '}']);
+  }
+
+  String get fromBson {
+    return brCompact([
+      '''
+void from_bson(bson::bo const& bson_object) {
+  bson::be bson_element;
+
+  try {
+${brCompact(_class.members.map((m) => _streamMemberFromBson(m)))}
+  } catch(std::exception const& excp) {
+    TRACE("Failed to parse Address with exception: {}"
+          " last read bson_element: {}",
+           excp.what(),
+           bson_element.jsonString(mongo::Strict, 1).c_str());
+    throw;
+  }
+''',
+
+      '}']);
+  }
+
+  String _streamMemberFromBson(Member m) {
+    print('Deal with ${m.runtimeType} ${m.id}');
+    print('Deal with ${m.id}');
+    return brCompact([
+    '''
+    bson_element = bson_ojbect.getField("${m.name}");
+    if(bson_element.ok()) bson_element.Val(${m.vname});
+'''
+  ]);
+  }
+
+  Member _makeMember(PodField podField) {
+    print('making podfield ${podField.id}');
+    return member(podField.id)
     ..type = getCppType(podField.podType)
     ..init = podField.defaultValue
     ..cppAccess = public;
+  }
 
   // end <class PodClass>
 
@@ -112,6 +163,7 @@ final _bsonToCpp = {
 
 String getCppType(PodType podType) {
   final bsonType = podType.bsonType;
+  print('Getting cpptype ${podType}');
   String result;
   if (bsonType == bsonObject) {
     result = podType.id.capCamel;
