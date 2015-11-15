@@ -105,11 +105,20 @@ A library that supports code generation of Angular2 code
       ]
       ..classes = [
 
+        class_('pod_member')
+        ..doc = 'Joins the C++ [Member] and the [PodField]'
+        ..isImmutable = true
+        ..members = [
+          member('pod_field')..type = 'PodField',
+          member('cpp_member')..type = 'Member',
+        ],
+
         class_('pod_class')
         ..doc = 'Support for generating the c++ class for a Pod'
         ..members = [
           member('pod_object')..type = 'PodObject',
-          member('class')..type = 'Class'..access = IA
+          member('class')..type = 'Class'..access = IA,
+          member('pod_members')..type = 'Lis<PodMember>'..classInit = []..access = IA,
         ],
 
         class_('pod_header')

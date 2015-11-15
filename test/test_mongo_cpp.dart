@@ -22,7 +22,6 @@ main([List<String> args]) {
   Logger.root.level = Level.OFF;
 // custom <main>
 
-  podObject('moo');
 
   final address = podObject('address')
     ..podFields = [
@@ -46,7 +45,7 @@ main([List<String> args]) {
     ..pods = [person]
     ..namespace = namespace(['config', 'users']);
 
-  print(personHeader.header.contents);
+  print(clangFormat(personHeader.header.contents));
 
 // end <main>
 }

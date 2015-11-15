@@ -122,9 +122,6 @@ class PodField {
 
   PodField(this._id, [this.podType]);
 
-  String toBson();
-  String fromBson();
-
   toString() => 'PodField($id:$podType)';
 
   // end <class PodField>

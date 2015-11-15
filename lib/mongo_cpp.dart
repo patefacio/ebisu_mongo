@@ -8,6 +8,23 @@ import 'pod.dart';
 // custom <additional imports>
 // end <additional imports>
 
+/// Joins the C++ [Member] and the [PodField]
+class PodMember {
+  const PodMember(this.podField, this.cppMember);
+
+  final PodField podField;
+  final Member cppMember;
+
+  // custom <class PodMember>
+
+  get name => cppMember.name;
+  get vname => cppMember.vname;
+  get cppType => cppMember.type;
+
+  // end <class PodMember>
+
+}
+
 /// Support for generating the c++ class for a Pod
 class PodClass {
   PodObject podObject;
@@ -17,29 +34,36 @@ class PodClass {
   PodClass(this.podObject);
 
   get podClass {
-    if(_class == null) {
+    if (_class == null) {
+      _createPodMembers();
       _class = class_(podObject.id)
         ..isStruct = true
         ..isStreamable = true
         ..defaultCtor.usesDefault = true
         ..assignCopy.usesDefault = true
         ..usesStreamers = podObject.hasArray
-        ..members = podObject.podFields.map((pf) => _makeMember(pf)).toList()
+        ..members = _podMembers.map((pm) => pm.cppMember).toList()
         ..addFullMemberCtor();
 
       /// add to/from bson
       _class.withCustomBlock(clsPublic, (CodeBlock cb) {
-        cb.snippets.addAll([ toBson, fromBson ]);
+        cb.snippets.addAll([toBson, fromBson]);
       });
     }
 
     return _class;
   }
 
+  _createPodMembers() {
+    assert(_podMembers.isEmpty);
+    _podMembers = podObject.podFields
+        .map((PodField podField) =>
+            new PodMember(podField, _makeMember(podField)))
+        .toList();
+  }
+
   String get toBson {
-    return brCompact([
-      'bson::bo to_bson(bool exclude_oid = false) {',
-      '}']);
+    return brCompact(['bson::bo to_bson(bool exclude_oid = false) {', '}']);
   }
 
   String get fromBson {
@@ -49,7 +73,7 @@ void from_bson(bson::bo const& bson_object) {
   bson::be bson_element;
 
   try {
-${brCompact(_class.members.map((m) => _streamMemberFromBson(m)))}
+${brCompact(_podMembers.map((pm) => _streamMember(pm)))}
   } catch(std::exception const& excp) {
     TRACE("Failed to parse Address with exception: {}"
           " last read bson_element: {}",
@@ -58,32 +82,58 @@ ${brCompact(_class.members.map((m) => _streamMemberFromBson(m)))}
     throw;
   }
 ''',
-
-      '}']);
+      '}'
+    ]);
   }
 
-  String _streamMemberFromBson(Member m) {
-    print('Deal with ${m.runtimeType} ${m.id}');
-    print('Deal with ${m.id}');
-    return brCompact([
-    '''
-    bson_element = bson_ojbect.getField("${m.name}");
-    if(bson_element.ok()) bson_element.Val(${m.vname});
+  String _streamMember(PodMember pm) {
+    final podType = pm.podField.podType;
+    return podType is PodScalar? _streamMemberScalarFromBson(pm) :
+      podType is PodArray? _streamMemberArrayFromBson(pm) :
+      podType is PodObject? _streamMemberObjectFromBson(pm) :
+      throw 'Invalid PodType $podType';
+  }
+
+  String _streamMemberScalarFromBson(PodMember pm) =>
+    brCompact([
+      '''
+    bson_element = bson_ojbect.getField("${pm.name}");
+    if(bson_element.ok()) bson_element.Val(${pm.vname});
 '''
-  ]);
+    ]);
+
+  String _streamMemberArrayFromBson(PodMember pm) =>
+    brCompact([
+      '''
+{
+  ${pm.vname}.clear();
+  bson_element = bson_object.getField("${pm.name}");
+  for(auto const& bson_arr_element__ : bson_element.Array()) {
+    ${pm.cppType}::value_type element;
+    element.from_bson(bson_arr_element__);
+    ${pm.vname}.push_back(element);
   }
+}
+'''
+    ]);
+
+  String _streamMemberObjectFromBson(PodMember pm) =>
+    '''
+bson_element = bson_object.getField("${pm.name}");
+${pm.vname}.from_bson(bson_element.Obj());
+''';
 
   Member _makeMember(PodField podField) {
-    print('making podfield ${podField.id}');
     return member(podField.id)
-    ..type = getCppType(podField.podType)
-    ..init = podField.defaultValue
-    ..cppAccess = public;
+      ..type = getCppType(podField.podType)
+      ..init = podField.defaultValue
+      ..cppAccess = public;
   }
 
   // end <class PodClass>
 
   Class _class;
+  Lis<PodMember> _podMembers = [];
 }
 
 class PodHeader {
@@ -109,8 +159,11 @@ class PodHeader {
 
       _header = new Header(id)
         ..namespace = namespace
-        ..classes =
-            allPods.toList().reversed.map((p) => new PodClass(p).podClass).toList();
+        ..classes = allPods
+            .toList()
+            .reversed
+            .map((p) => new PodClass(p).podClass)
+            .toList();
 
       if (allPods.any((p) => p.hasArray)) {
         _header.includes
@@ -163,7 +216,6 @@ final _bsonToCpp = {
 
 String getCppType(PodType podType) {
   final bsonType = podType.bsonType;
-  print('Getting cpptype ${podType}');
   String result;
   if (bsonType == bsonObject) {
     result = podType.id.capCamel;
