@@ -50,6 +50,7 @@ class PodClass {
         ..usesStreamers = podObject.hasArray
         ..members = _podMembers.map((pm) => pm.cppMember).toList()
         ..members.add(member('oid')
+          ..isStreamable = false
           ..isByRef = true
           ..access = ro
           ..type = 'mongo::OID'
@@ -121,7 +122,8 @@ ${brCompact(_podMembers.map((pm) => _streamMemberToBson(pm)))}
 {
   mongo::BSONArrayBuilder array_builder(builder__.subarrayStart("${pm.name}"));
   for(auto const& entry__ : ${pm.vname}) {
-    array_builder.append(entry__);
+    auto bson_object__ = entry__.to_bson();
+    array_builder.append(bson_object__);
   }
 }
 '''
@@ -184,7 +186,7 @@ ${brCompact(_podMembers.map((pm) => _streamMemberFromBson(pm)))}
 '''
           : '''
     ${pm.cppType}::value_type element;
-    element.from_bson(bson_arr_element__);
+    element.from_bson(bson_arr_element__.Obj());
     ${pm.vname}.push_back(element);
 '''),
       '''
