@@ -3,6 +3,7 @@ library ebisu_mongo.mongo_cpp;
 import 'package:ebisu/ebisu.dart';
 import 'package:ebisu_cpp/ebisu_cpp.dart';
 import 'package:id/id.dart';
+import 'package:quiver/iterables.dart';
 import 'pod.dart';
 
 // custom <additional imports>
@@ -20,6 +21,11 @@ class PodMember {
   get name => cppMember.name;
   get vname => cppMember.vname;
   get cppType => cppMember.type;
+
+  get podType => podField.podType;
+  get isScalar => podField.podType.isScalar;
+  get isArray => podField.podType.isArray;
+  get isObject => podField.podType.isObject;
 
   // end <class PodMember>
 
@@ -43,7 +49,17 @@ class PodClass {
         ..assignCopy.usesDefault = true
         ..usesStreamers = podObject.hasArray
         ..members = _podMembers.map((pm) => pm.cppMember).toList()
-        ..addFullMemberCtor();
+        ..members.add(member('oid')
+          ..isByRef = true
+          ..access = ro
+          ..type = 'mongo::OID'
+          ..isMutable = true)
+        ..memberCtors = [
+          memberCtor(concat([
+            _podMembers.map((pm) => pm.cppMember.id.snake),
+            [memberCtorParm('oid')..defaultValue = 'mongo::OID()']
+          ]))
+        ];
 
       /// add to/from bson
       _class.withCustomBlock(clsPublic, (CodeBlock cb) {
@@ -63,8 +79,56 @@ class PodClass {
   }
 
   String get toBson {
-    return brCompact(['bson::bo to_bson(bool exclude_oid = false) {', '}']);
+    return brCompact([
+      '''
+bson::bo to_bson(bool exclude_oid = false) const {
+  bson::bob builder;
+  to_bson(builder, exclude_oid);
+  return builder.obj();
+}
+
+void to_bson(bson::bob &builder__, bool exclude_oid = false) const {
+  if(!exclude_oid) {
+    if(!oid_.isSet()) {
+      oid_.init();
+    }
+    builder__ << "_id" << oid_;
   }
+
+${brCompact(_podMembers.map((pm) => _streamMemberToBson(pm)))}
+
+}
+'''
+    ]);
+  }
+
+  String _streamMemberToBson(PodMember pm) {
+    final podType = pm.podField.podType;
+    return podType is PodScalar
+        ? _streamMemberScalarToBson(pm)
+        : podType is PodArray
+            ? _streamMemberArrayToBson(pm)
+            : podType is PodObject
+                ? _streamMemberObjectToBson(pm)
+                : throw 'Invalid PodType $podType';
+  }
+
+  String _streamMemberScalarToBson(PodMember pm) =>
+      'builder__ << "${pm.name}" << ${pm.vname};\n';
+
+  String _streamMemberArrayToBson(PodMember pm) => brCompact([
+        '''
+{
+  mongo::BSONArrayBuilder array_builder(builder__.subarrayStart("${pm.name}"));
+  for(auto const& entry__ : ${pm.vname}) {
+    array_builder.append(entry__);
+  }
+}
+'''
+      ]);
+
+  String _streamMemberObjectToBson(PodMember pm) => '''
+''';
 
   String get fromBson {
     return brCompact([
@@ -73,7 +137,7 @@ void from_bson(bson::bo const& bson_object) {
   bson::be bson_element;
 
   try {
-${brCompact(_podMembers.map((pm) => _streamMember(pm)))}
+${brCompact(_podMembers.map((pm) => _streamMemberFromBson(pm)))}
   } catch(std::exception const& excp) {
     TRACE("Failed to parse Address with exception: {}"
           " last read bson_element: {}",
@@ -86,39 +150,51 @@ ${brCompact(_podMembers.map((pm) => _streamMember(pm)))}
     ]);
   }
 
-  String _streamMember(PodMember pm) {
-    final podType = pm.podField.podType;
-    return podType is PodScalar? _streamMemberScalarFromBson(pm) :
-      podType is PodArray? _streamMemberArrayFromBson(pm) :
-      podType is PodObject? _streamMemberObjectFromBson(pm) :
-      throw 'Invalid PodType $podType';
+  String _streamMemberFromBson(PodMember pm) {
+    return pm.isScalar
+        ? _streamMemberScalarFromBson(pm)
+        : pm.isArray
+            ? _streamMemberArrayFromBson(pm)
+            : pm.isObject
+                ? _streamMemberObjectFromBson(pm)
+                : throw 'Invalid PodType for $pm';
   }
 
-  String _streamMemberScalarFromBson(PodMember pm) =>
-    brCompact([
-      '''
-    bson_element = bson_ojbect.getField("${pm.name}");
+  String _streamMemberScalarFromBson(PodMember pm) => brCompact([
+        '''
+    bson_element = bson_object.getField("${pm.name}");
     if(bson_element.ok()) bson_element.Val(${pm.vname});
 '''
-    ]);
+      ]);
 
-  String _streamMemberArrayFromBson(PodMember pm) =>
-    brCompact([
+  String _streamMemberArrayFromBson(PodMember pm) {
+    final referredType = (pm.podType as PodArray).referredType;
+    return brCompact([
       '''
 {
   ${pm.vname}.clear();
   bson_element = bson_object.getField("${pm.name}");
   for(auto const& bson_arr_element__ : bson_element.Array()) {
+''',
+      (referredType.isScalar
+          ? '''
+    ${getCppType(pm.podType.referredType)} temp__;
+    bson_arr_element__.Val(temp__);
+    ${pm.vname}.push_back(temp__);
+'''
+          : '''
     ${pm.cppType}::value_type element;
     element.from_bson(bson_arr_element__);
     ${pm.vname}.push_back(element);
+'''),
+      '''
   }
 }
 '''
     ]);
+  }
 
-  String _streamMemberObjectFromBson(PodMember pm) =>
-    '''
+  String _streamMemberObjectFromBson(PodMember pm) => '''
 bson_element = bson_object.getField("${pm.name}");
 ${pm.vname}.from_bson(bson_element.Obj());
 ''';
@@ -159,6 +235,8 @@ class PodHeader {
 
       _header = new Header(id)
         ..namespace = namespace
+        ..includes.addAll(['mongo/client/dbclient.h'])
+        ..getCodeBlock(fcbBeginNamespace).snippets.add(_helperCppFunctions)
         ..classes = allPods
             .toList()
             .reversed
@@ -172,6 +250,31 @@ class PodHeader {
     }
     return _header;
   }
+
+  get _helperCppFunctions => '''
+
+template < typename BUILDER, typename T >
+inline BUILDER& to_bson(BUILDER &builder, T const& item) {
+  builder << item;
+  return builder;
+}
+
+template < typename BUILDER >
+inline BUILDER& to_bson(BUILDER &builder, bson::bo const& object) {
+  builder << object;
+  return builder;
+}
+
+template < typename BUILDER, typename T >
+inline void to_bson(BUILDER &builder, std::vector< T > const& items) {
+  mongo::BSONArrayBuilder array_builder;
+  for(auto const& item : items) {
+    bson::bob element_builder;
+    array_builder.append(to_bson(element_builder, item));
+  }
+}
+
+''';
 
   Set _collectPods(PodObject podObject, Set<PodObject> uniquePods) {
     if (!uniquePods.contains(podObject)) {

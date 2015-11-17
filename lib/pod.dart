@@ -84,6 +84,10 @@ class PodType {
 
   PodType(this.bsonType);
 
+  get isScalar => this is PodScalar;
+  get isArray => this is PodArray;
+  get isObject => this is PodObject;
+
   // end <class PodType>
 
 }
@@ -162,7 +166,11 @@ PodField podField(id, [podType]) {
 
 PodObject podObject(id, [podFields]) => new PodObject(makeId(id), podFields);
 
-PodArray podArray(PodType referredType) => new PodArray(referredType);
+PodArray podArray(dynamic referredType) => referredType is PodType
+    ? new PodArray(referredType)
+    : referredType is BsonType
+        ? new PodArray(new PodScalar(referredType))
+        : throw 'podArray(...) requires PodType or BsonType: $referredType';
 
 PodField podArrayField(id, PodType referredType) =>
     podField(id, podArray(referredType));

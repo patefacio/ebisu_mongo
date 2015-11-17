@@ -22,7 +22,6 @@ main([List<String> args]) {
   Logger.root.level = Level.OFF;
 // custom <main>
 
-
   final address = podObject('address')
     ..podFields = [
       podField('street', bsonString),
@@ -38,7 +37,9 @@ main([List<String> args]) {
       podField('age', bsonInt32)..defaultValue = 32,
       podField('birth_date', bsonDate),
       podField('address', address)..defaultValue = '"foo", "bar", "goo"',
-      podArrayField('children', person)
+      podArrayField('children', person),
+      podArrayField('pet_names', bsonString),
+      podArrayField('pet_ages', bsonInt32),
     ];
 
   final personHeader = podHeader('person')

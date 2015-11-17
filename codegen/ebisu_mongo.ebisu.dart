@@ -99,6 +99,7 @@ A library that supports code generation of Angular2 code
       library('mongo_cpp')
       ..imports = [
         'pod.dart',
+        'package:quiver/iterables.dart',
         'package:id/id.dart',
         'package:ebisu/ebisu.dart',
         'package:ebisu_cpp/ebisu_cpp.dart',
