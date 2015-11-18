@@ -1,12 +1,12 @@
+#define TRACE(...)
+using Date_t = int;
+
 #include "ebisu/utils/block_indenter.hpp"
 #include "ebisu/utils/streamers/vector.hpp"
 #include "mongo/client/dbclient.h"
 #include <iosfwd>
 #include <string>
 #include <vector>
-
-#define TRACE(...)
-using Date_t = int;
 
 namespace config {
 namespace users {
@@ -184,7 +184,11 @@ struct Person {
       bson_element = bson_object.getField("birth_date");
       if (bson_element.ok()) bson_element.Val(birth_date);
       bson_element = bson_object.getField("address");
-      address.from_bson(bson_element.Obj());
+      if (bson_element.ok()) {
+        address.from_bson(bson_element.Obj());
+      } else {
+        TRACE("Missing PodMember(Person :: address)");
+      }
       {
         children.clear();
         bson_element = bson_object.getField("children");

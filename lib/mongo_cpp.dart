@@ -27,6 +27,8 @@ class PodMember {
   get isArray => podField.podType.isArray;
   get isObject => podField.podType.isObject;
 
+  toString() => '${cppMember.name}';
+
   // end <class PodMember>
 
 }
@@ -117,13 +119,20 @@ ${brCompact(_podMembers.map((pm) => _streamMemberToBson(pm)))}
   String _streamMemberScalarToBson(PodMember pm) =>
       'builder__ << "${pm.name}" << ${pm.vname};\n';
 
+  String _streamArrayMemberToBson(PodType podType) =>
+    podType is PodScalar? 'array_builder.append(entry__);' :
+    podType is PodObject? '''
+  auto bson_object__ = entry__.to_bson();
+  array_builder.append(bson_object__);
+''' :
+    throw 'Only scalars and objects may be stored in arrays $podType';
+
   String _streamMemberArrayToBson(PodMember pm) => brCompact([
         '''
 {
   mongo::BSONArrayBuilder array_builder(builder__.subarrayStart("${pm.name}"));
   for(auto const& entry__ : ${pm.vname}) {
-    auto bson_object__ = entry__.to_bson();
-    array_builder.append(bson_object__);
+${_streamArrayMemberToBson((pm.podType as PodArray).referredType)}
   }
 }
 '''
@@ -198,7 +207,11 @@ ${brCompact(_podMembers.map((pm) => _streamMemberFromBson(pm)))}
 
   String _streamMemberObjectFromBson(PodMember pm) => '''
 bson_element = bson_object.getField("${pm.name}");
-${pm.vname}.from_bson(bson_element.Obj());
+if(bson_element.ok()) {
+  ${pm.vname}.from_bson(bson_element.Obj());
+} else {
+  TRACE("Missing PodMember(${_class.className} :: $pm)");
+}
 ''';
 
   Member _makeMember(PodField podField) {
