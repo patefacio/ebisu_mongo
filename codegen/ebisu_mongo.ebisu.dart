@@ -119,7 +119,7 @@ A library that supports code generation of Angular2 code
         ..members = [
           member('pod_object')..type = 'PodObject',
           member('class')..type = 'Class'..access = IA,
-          member('pod_members')..type = 'Lis<PodMember>'..classInit = []..access = IA,
+          member('pod_members')..type = 'List<PodMember>'..classInit = []..access = IA,
         ],
 
         class_('pod_header')

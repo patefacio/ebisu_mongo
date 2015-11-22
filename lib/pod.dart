@@ -172,7 +172,7 @@ PodArray podArray(dynamic referredType) => referredType is PodType
         ? new PodArray(new PodScalar(referredType))
         : throw 'podArray(...) requires PodType or BsonType: $referredType';
 
-PodField podArrayField(id, PodType referredType) =>
+PodField podArrayField(id, referredType) =>
     podField(id, podArray(referredType));
 
 // end <library pod>

@@ -119,13 +119,14 @@ ${brCompact(_podMembers.map((pm) => _streamMemberToBson(pm)))}
   String _streamMemberScalarToBson(PodMember pm) =>
       'builder__ << "${pm.name}" << ${pm.vname};\n';
 
-  String _streamArrayMemberToBson(PodType podType) =>
-    podType is PodScalar? 'array_builder.append(entry__);' :
-    podType is PodObject? '''
+  String _streamArrayMemberToBson(PodType podType) => podType is PodScalar
+      ? 'array_builder.append(entry__);'
+      : podType is PodObject
+          ? '''
   auto bson_object__ = entry__.to_bson();
   array_builder.append(bson_object__);
-''' :
-    throw 'Only scalars and objects may be stored in arrays $podType';
+'''
+          : throw 'Only scalars and objects may be stored in arrays $podType';
 
   String _streamMemberArrayToBson(PodMember pm) => brCompact([
         '''
@@ -224,7 +225,7 @@ if(bson_element.ok()) {
   // end <class PodClass>
 
   Class _class;
-  Lis<PodMember> _podMembers = [];
+  List<PodMember> _podMembers = [];
 }
 
 class PodHeader {
