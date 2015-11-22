@@ -7,6 +7,12 @@ using Date_t = int;
 #include <iosfwd>
 #include <string>
 #include <vector>
+#include "ebisu/utils/block_indenter.hpp"
+#include "ebisu/utils/streamers/vector.hpp"
+#include "mongo/client/dbclient.h"
+#include <iosfwd>
+#include <string>
+#include <vector>
 
 namespace config {
 namespace users {

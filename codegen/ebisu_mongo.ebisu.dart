@@ -16,7 +16,7 @@ void main() {
   Logger.root.level = Level.OFF;
 
   final purpose = '''
-A library that supports code generation of Angular2 code
+Support for generating code providing mongo data access patterns.
 ''';
 
   _topDir = path.dirname(path.dirname(here));
