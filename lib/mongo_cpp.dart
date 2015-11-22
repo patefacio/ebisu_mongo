@@ -2,9 +2,9 @@ library ebisu_mongo.mongo_cpp;
 
 import 'package:ebisu/ebisu.dart';
 import 'package:ebisu_cpp/ebisu_cpp.dart';
+import 'package:ebisu_pod/pod.dart';
 import 'package:id/id.dart';
 import 'package:quiver/iterables.dart';
-import 'pod.dart';
 
 // custom <additional imports>
 // end <additional imports>
@@ -317,31 +317,28 @@ inline void to_bson(BUILDER &builder, std::vector< T > const& items) {
 PodHeader podHeader(id, [List<Pod> pods, Namespace namespace]) =>
     new PodHeader(makeId(id), pods, namespace);
 
-final _bsonToCpp = {
-  bsonDouble: 'double',
-  bsonString: 'std::string',
-  bsonObject: null,
-  bsonArray: null,
-  bsonBinaryData: null,
-  bsonObjectId: 'Object_id_t',
-  bsonBoolean: 'bool',
-  bsonDate: 'Date_t',
-  bsonNull: null,
-  bsonRegex: 'Regexp_t',
-  bsonInt32: 'int32_t',
-  bsonInt64: 'int64_t',
-  bsonTimestamp: 'Timestamp_t',
+final _podScalarTypeToCpp = {
+  podDouble: 'double',
+  podString: 'std::string',
+  podBinaryData: null,
+  podObjectId: 'Object_id_t',
+  podBoolean: 'bool',
+  podDate: 'Date_t',
+  podNull: null,
+  podRegex: 'Regexp_t',
+  podInt32: 'int32_t',
+  podInt64: 'int64_t',
+  podTimestamp: 'Timestamp_t',
 };
 
 String getCppType(PodType podType) {
-  final bsonType = podType.bsonType;
   String result;
-  if (bsonType == bsonObject) {
+  if (podType.isObject) {
     result = podType.id.capCamel;
-  } else if (bsonType == bsonArray) {
+  } else if (podType.isArray) {
     result = 'std::vector<${getCppType(podType.referredType)}>';
   } else {
-    result = _bsonToCpp[bsonType];
+    result = _podScalarTypeToCpp[podType];
   }
   return result;
 }

@@ -30,75 +30,13 @@ Support for generating code providing mongo data access patterns.
     ..rootPath = _topDir
     ..doc = purpose
     ..testLibraries = [
-      library('test_pod'),
       library('test_mongo_cpp'),
     ]
     ..libraries = [
 
-      library('pod')
-      ..includesLogger = true
-      ..imports = [
-        'package:ebisu/ebisu.dart',
-        'package:id/id.dart',
-      ]
-      ..enums = [
-        enum_('bson_type')
-        ..hasLibraryScopedValues = true
-        ..values = [
-          'bson_double',
-          'bson_string',
-          'bson_object',
-          'bson_array',
-          'bson_binary_data',
-          'bson_object_id',
-          'bson_boolean',
-          'bson_date',
-          'bson_null',
-          'bson_regex',
-          'bson_int32',
-          'bson_int64',
-          'bson_timestamp',
-        ]
-      ]
-      ..classes = [
-
-        class_('pod_type')
-        ..members = [
-          member('bson_type')..type = 'BsonType',
-        ],
-
-        class_('pod_scalar')
-        ..extend = 'PodType'
-        ..members = [
-        ],
-
-        class_('pod_array')
-        ..extend = 'PodType'
-        ..members = [
-          member('referred_type')..type = 'PodType',
-        ],
-
-        class_('pod_field')
-        ..members = [
-          member('id')..type = 'Id'..access = RO,
-          member('is_index')
-          ..doc = 'If true the field is defined as index'
-          ..classInit = false,
-          member('pod_type')..type = 'PodType',
-          member('default_value')..type = 'dynamic',
-        ],
-
-        class_('pod_object')
-        ..extend = 'PodType'
-        ..members = [
-          member('id')..type = 'Id'..access = RO,
-          member('pod_fields')..type = 'List<PodField>'..classInit = [],
-        ],
-      ],
-
       library('mongo_cpp')
       ..imports = [
-        'pod.dart',
+        'package:ebisu_pod/pod.dart',
         'package:quiver/iterables.dart',
         'package:id/id.dart',
         'package:ebisu/ebisu.dart',

@@ -6,7 +6,7 @@ import 'package:test/test.dart';
 // custom <additional imports>
 
 import 'package:ebisu_cpp/ebisu_cpp.dart';
-import '../lib/pod.dart';
+import 'package:ebisu_pod/pod.dart';
 import '../lib/mongo_cpp.dart';
 
 // end <additional imports>
@@ -24,22 +24,22 @@ main([List<String> args]) {
 
   final address = podObject('address')
     ..podFields = [
-      podField('street', bsonString),
-      podField('zipcode', bsonString),
-      podField('state', bsonString),
+      podField('street'),
+      podField('zipcode'),
+      podField('state'),
     ];
 
   final person = podObject('person');
 
   person
     ..podFields = [
-      podField('name', bsonString),
-      podField('age', bsonInt32)..defaultValue = 32,
-      podField('birth_date', bsonDate),
+      podField('name'),
+      podField('age', podInt32)..defaultValue = 32,
+      podField('birth_date', podDate),
       podField('address', address)..defaultValue = '"foo", "bar", "goo"',
       podArrayField('children', person),
-      podArrayField('pet_names', bsonString),
-      podArrayField('pet_ages', bsonInt32),
+      podArrayField('pet_names', podString),
+      podArrayField('pet_ages', podInt32),
     ];
 
   final personHeader = podHeader('person')
