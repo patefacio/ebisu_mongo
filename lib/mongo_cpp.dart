@@ -2,7 +2,7 @@ library ebisu_mongo.mongo_cpp;
 
 import 'package:ebisu/ebisu.dart';
 import 'package:ebisu_cpp/ebisu_cpp.dart';
-import 'package:ebisu_pod/pod.dart';
+import 'package:ebisu_pod/ebisu_pod.dart';
 import 'package:id/id.dart';
 import 'package:quiver/iterables.dart';
 
@@ -23,7 +23,6 @@ class PodMember {
   get cppType => cppMember.type;
 
   get podType => podField.podType;
-  get isScalar => podField.podType.isScalar;
   get isArray => podField.podType.isArray;
   get isObject => podField.podType.isObject;
 
@@ -75,7 +74,10 @@ class PodClass {
 
   _createPodMembers() {
     assert(_podMembers.isEmpty);
-    _podMembers = podObject.podFields
+    _podMembers = podObject.fields
+        .where((f) => f is PodType)
+
+        /// TODO: deal with PodTypeRef
         .map((PodField podField) =>
             new PodMember(podField, _makeMember(podField)))
         .toList();
@@ -107,26 +109,24 @@ ${brCompact(_podMembers.map((pm) => _streamMemberToBson(pm)))}
 
   String _streamMemberToBson(PodMember pm) {
     final podType = pm.podField.podType;
-    return podType is PodScalar
-        ? _streamMemberScalarToBson(pm)
-        : podType is PodArray
-            ? _streamMemberArrayToBson(pm)
-            : podType is PodObject
-                ? _streamMemberObjectToBson(pm)
-                : throw 'Invalid PodType $podType';
+    return podType is PodArray
+        ? _streamMemberArrayToBson(pm)
+        : podType is PodObject
+            ? _streamMemberObjectToBson(pm)
+            : _streamMemberScalarToBson(pm);
   }
 
   String _streamMemberScalarToBson(PodMember pm) =>
       'builder__ << "${pm.name}" << ${pm.vname};\n';
 
-  String _streamArrayMemberToBson(PodType podType) => podType is PodScalar
-      ? 'array_builder.append(entry__);'
-      : podType is PodObject
-          ? '''
+  String _streamArrayMemberToBson(PodType podType) => podType is PodObject
+      ? '''
   auto bson_object__ = entry__.to_bson();
   array_builder.append(bson_object__);
 '''
-          : throw 'Only scalars and objects may be stored in arrays $podType';
+      : podType is PodArray
+          ? throw 'Arrays may not nest be stored in arrays $podType'
+          : 'array_builder.append(entry__);';
 
   String _streamMemberArrayToBson(PodMember pm) => brCompact([
         '''
@@ -163,13 +163,11 @@ ${brCompact(_podMembers.map((pm) => _streamMemberFromBson(pm)))}
   }
 
   String _streamMemberFromBson(PodMember pm) {
-    return pm.isScalar
-        ? _streamMemberScalarFromBson(pm)
-        : pm.isArray
-            ? _streamMemberArrayFromBson(pm)
-            : pm.isObject
-                ? _streamMemberObjectFromBson(pm)
-                : throw 'Invalid PodType for $pm';
+    return pm.isArray
+        ? _streamMemberArrayFromBson(pm)
+        : pm.isObject
+            ? _streamMemberObjectFromBson(pm)
+            : _streamMemberScalarFromBson(pm);
   }
 
   String _streamMemberScalarFromBson(PodMember pm) => brCompact([
@@ -188,7 +186,7 @@ ${brCompact(_podMembers.map((pm) => _streamMemberFromBson(pm)))}
   bson_element = bson_object.getField("${pm.name}");
   for(auto const& bson_arr_element__ : bson_element.Array()) {
 ''',
-      (referredType.isScalar
+      (referredType is PodArray
           ? '''
     ${getCppType(pm.podType.referredType)} temp__;
     bson_arr_element__.Val(temp__);
@@ -228,14 +226,15 @@ if(bson_element.ok()) {
   List<PodMember> _podMembers = [];
 }
 
+/// Support for turning one or more PodPackages into C++ code definitions within a single header
 class PodHeader {
   Id get id => _id;
-  List<Pod> pods = [];
+  List<PodPackage> podPackages = [];
   Namespace namespace;
 
   // custom <class PodHeader>
 
-  PodHeader(this._id, [this.pods, this.namespace]);
+  PodHeader(this._id, [this.podPackages, this.namespace]);
 
   toString() => brCompact([
         'namespace $namespace {',
@@ -246,8 +245,8 @@ class PodHeader {
 
   Header get header {
     if (_header == null) {
-      final allPods = new Set<PodObject>();
-      pods.forEach((pod) => _collectPods(pod, allPods));
+      final allPods = concat(podPackages.map(
+          (podPackage) => podPackage.allTypes.where((t) => t is PodObject)));
 
       _header = new Header(id)
         ..namespace = namespace
@@ -292,20 +291,6 @@ inline void to_bson(BUILDER &builder, std::vector< T > const& items) {
 
 ''';
 
-  Set _collectPods(PodObject podObject, Set<PodObject> uniquePods) {
-    if (!uniquePods.contains(podObject)) {
-      uniquePods.add(podObject);
-      for (PodField podField in podObject.podFields) {
-        final p = podField.podType;
-        if (p is PodObject) {
-          _collectPods(p, uniquePods);
-        } else if (p is PodArray && p.referredType is PodObject) {
-          _collectPods(p.referredType, uniquePods);
-        }
-      }
-    }
-  }
-
   // end <class PodHeader>
 
   Id _id;
@@ -318,17 +303,17 @@ PodHeader podHeader(id, [List<Pod> pods, Namespace namespace]) =>
     new PodHeader(makeId(id), pods, namespace);
 
 final _podScalarTypeToCpp = {
-  podDouble: 'double',
-  podString: 'std::string',
-  podBinaryData: null,
-  podObjectId: 'Object_id_t',
-  podBoolean: 'bool',
-  podDate: 'Date_t',
-  podNull: null,
-  podRegex: 'Regexp_t',
-  podInt32: 'int32_t',
-  podInt64: 'int64_t',
-  podTimestamp: 'Timestamp_t',
+  Double: 'double',
+  String: 'std::string',
+  BinaryData: null,
+  ObjectId: 'Object_id_t',
+  Boolean: 'bool',
+  Date: 'Date_t',
+  Null: null,
+  Regex: 'Regexp_t',
+  Int32: 'int32_t',
+  Int64: 'int64_t',
+  Timestamp: 'Timestamp_t',
 };
 
 String getCppType(PodType podType) {

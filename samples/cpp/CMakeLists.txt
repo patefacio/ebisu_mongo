@@ -27,6 +27,9 @@ find_package(Boost 1.54.0 COMPONENTS program_options system thread
 ######################################################################
 link_directories(
 # custom <link directories>
+
+/opt/mongo-client-install/lib
+  
 # end <link directories>
 
 )
@@ -41,6 +44,7 @@ include_directories(
   ${Boost_INCLUDE_DIRS}
 # custom <include directories>
 
+  /opt/mongo-client-install/include
   ~/dev/open_source/cpp_ebisu/cpp
 
 # end <include directories>

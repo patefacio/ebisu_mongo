@@ -43,6 +43,10 @@ dependency_overrides:
   ebisu_cpp: 
     git: git://github.com/patefacio/ebisu_cpp
     #path: /home/dbdavidson/dev/open_source/ebisu_cpp
+
+  ebisu_pod:
+    #git: git://github.com/patefacio/ebisu_pod
+    path: /home/dbdavidson/dev/open_source/ebisu_pod
     
 # end <ebisu_mongo dependency overrides>
 

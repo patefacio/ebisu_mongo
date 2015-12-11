@@ -36,7 +36,7 @@ Support for generating code providing mongo data access patterns.
 
       library('mongo_cpp')
       ..imports = [
-        'package:ebisu_pod/pod.dart',
+        'package:ebisu_pod/ebisu_pod.dart',
         'package:quiver/iterables.dart',
         'package:id/id.dart',
         'package:ebisu/ebisu.dart',
@@ -61,9 +61,10 @@ Support for generating code providing mongo data access patterns.
         ],
 
         class_('pod_header')
+        ..doc = 'Support for turning one or more PodPackages into C++ code definitions within a single header'
         ..members = [
           member('id')..type = 'Id'..access = RO,
-          member('pods')..type = 'List<Pod>'..classInit = [],
+          member('pod_packages')..type = 'List<PodPackage>'..classInit = [],
           member('namespace')..type = 'Namespace',
           member('header')..access = IA..type = 'Header',
         ],
